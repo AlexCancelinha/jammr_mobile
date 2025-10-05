@@ -1,6 +1,8 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 
+import '../services/backend_service.dart';
+
 class ScanScreen extends StatefulWidget {
   const ScanScreen({super.key});
 
@@ -16,7 +18,6 @@ class _ScanScreenState extends State<ScanScreen>
 
   double get _baseScale => _ballMoved ? 0.3 : 1.0;
 
-
   late AnimationController _pulseController;
   late AnimationController _moveController;
 
@@ -25,23 +26,7 @@ class _ScanScreenState extends State<ScanScreen>
 
   List<bool> _avatarVisible = [];
 
-  final List<Map<String, String>> users = const [
-    {
-      "name": "Alice",
-      "avatar": "https://i.pravatar.cc/150?img=1",
-      "song": "Blinding Lights - The Weeknd"
-    },
-    {
-      "name": "Bob",
-      "avatar": "https://i.pravatar.cc/150?img=2",
-      "song": "Levitating - Dua Lipa"
-    },
-    {
-      "name": "Charlie",
-      "avatar": "https://i.pravatar.cc/150?img=3",
-      "song": "Peaches - Justin Bieber"
-    },
-  ];
+  List<Map<String, dynamic>> users = const [];
 
   @override
   void initState() {
@@ -75,21 +60,26 @@ class _ScanScreenState extends State<ScanScreen>
     super.dispose();
   }
 
-  void _startScan() {
+  void _startScan() async {
     setState(() {
       _loading = true;
       _scanned = false;
-      _avatarVisible = List.filled(users.length, false);
+      _avatarVisible = [];
     });
 
-    _pulseController.forward(from: 0.0); // start pulse from current value
+    // Simulate delay for "scanning"
+    await Future.delayed(const Duration(seconds: 2));
 
-    Future.delayed(const Duration(seconds: 2), () {
+    try {
+      final fetchedUsers = await BackendService.fetchUsers();
+
       if (!mounted) return;
 
       setState(() {
+        users = fetchedUsers;
         _loading = false;
         _scanned = true;
+        _avatarVisible = List.filled(users.length, false);
       });
 
       // Show avatars one by one
@@ -99,15 +89,36 @@ class _ScanScreenState extends State<ScanScreen>
         });
       }
 
-      // Move & shrink only the first time
       if (!_ballMoved) {
         _moveController.forward();
         _ballMoved = true;
       }
-    });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _scanned = false;
+        });
+      }
+      print("Error fetching users: $e");
+    }
   }
 
+  /// ✅ Safe avatar widget with placeholder fallback
+  Widget avatar(String? url, {double radius = 40}) {
+    if (url == null || url.isEmpty || !url.startsWith("http")) {
+      return CircleAvatar(
+        radius: radius,
+        backgroundImage: const AssetImage('assets/images/default_avatar.png'),
+      );
+    }
 
+    return CircleAvatar(
+      radius: radius,
+      backgroundImage: NetworkImage(url),
+      onBackgroundImageError: (_, __) {},
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -141,16 +152,19 @@ class _ScanScreenState extends State<ScanScreen>
             if (_loading)
               Positioned(
                 bottom: size.height * 0.15,
-                left: centerX - 60,
-                child: const Column(
-                  children: [
-                    CircularProgressIndicator(color: Colors.greenAccent),
-                    SizedBox(height: 12),
-                    Text(
-                      "Scanning nearby users...",
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ],
+                child: SizedBox(
+                  width: size.width,
+                  child: const Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(color: Colors.greenAccent),
+                      SizedBox(height: 12),
+                      Text(
+                        "Scanning nearby users...",
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ],
+                  ),
                 ),
               ),
 
@@ -176,8 +190,8 @@ class _ScanScreenState extends State<ScanScreen>
                         showDialog(
                           context: context,
                           builder: (_) => AlertDialog(
-                            title: Text(user["name"]!),
-                            content: Text("🎶 ${user["song"]}"),
+                            title: Text(user["name"] ?? ""),
+                            content: Text("🎶 ${user["currentSong"] ?? "Unknown"}"),
                             actions: [
                               TextButton(
                                 onPressed: () => Navigator.pop(context),
@@ -189,17 +203,10 @@ class _ScanScreenState extends State<ScanScreen>
                       },
                       child: Column(
                         children: [
-                          CircleAvatar(
-                            radius: 40,
-                            backgroundImage: NetworkImage(user["avatar"]!),
-                          ),
-                          const SizedBox(height: 4),
+                          avatar(user["avatarUrl"], radius: 40),
                           Text(
-                            user["name"]!,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                            ),
+                            user["name"] ?? "",
+                            style: const TextStyle(color: Colors.white, fontSize: 14),
                           ),
                         ],
                       ),
