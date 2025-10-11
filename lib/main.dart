@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'screens/scan_screen.dart';
+import 'screens/scan/scan_screen.dart';
 
 void main() {
   runApp(const JammrApp());
@@ -12,8 +12,9 @@ class JammrApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Jammr',
-      theme: ThemeData.dark(),
+      theme: ThemeData.dark(useMaterial3: true),
       home: const ScanScreen(),
+      debugShowCheckedModeBanner: false,
     );
   }
 }
