@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jammr_mobile/screens/scan/widgets/user_card.dart';
 import 'package:provider/provider.dart';
 import '../../controllers/scan_controller.dart';
 import 'widgets/scan_button.dart';
@@ -120,12 +121,9 @@ class _ScanScreenState extends State<ScanScreen>
                               child: Padding(
                                 padding:
                                 const EdgeInsets.symmetric(vertical: 8.0),
-                                child: Text(
-                                  controller.users[i].name,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                  ),
+                                child: UserCard(
+                                  user: controller.users[i],
+                                  visible: controller.avatarVisible[i],
                                 ),
                               ),
                             ),
